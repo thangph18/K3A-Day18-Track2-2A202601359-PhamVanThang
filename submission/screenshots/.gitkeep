@@ -1,0 +1,5 @@
+# Thư mục lưu ảnh chụp màn hình nộp bài
+# Hãy lưu các ảnh sau vào đây:
+# 1. Ảnh cây thư mục: tree _lakehouse/
+# 2. Ảnh nội dung log: cat _lakehouse/bronze/llm_calls_raw/_delta_log/00000000000000000000.json
+# 3. Ảnh kết quả: make run-all (8/8 PASS)

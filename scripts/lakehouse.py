@@ -28,8 +28,19 @@ def path(layer: str, table: str) -> str:
 def reset(*paths: str) -> None:
     """Delete tables (idempotent rerun support). No-op if missing."""
     import shutil
+    import time
     for p in paths:
-        shutil.rmtree(p, ignore_errors=True)
+        path_obj = Path(p)
+        if not path_obj.exists():
+            continue
+        for _ in range(3):
+            try:
+                shutil.rmtree(p, ignore_errors=True)
+                if not path_obj.exists():
+                    break
+                time.sleep(0.05)
+            except Exception:
+                pass
 
 
 # ── Convenience: swap to S3 / MinIO with one env var ──
@@ -98,12 +109,10 @@ def reset_catalog(name: str = "lab") -> None:
 
 def namespace(cat, ns: str = "lake"):
     """Idempotently ensure a namespace exists, then return its name."""
-    from pyiceberg.exceptions import NamespaceAlreadyExistsError
-
     try:
         cat.create_namespace(ns)
-    except NamespaceAlreadyExistsError:
-        pass
+    except Exception:
+        pass  # exists
     return ns
 
 
@@ -117,8 +126,21 @@ def du(target: str | Path) -> int:
     if not p.exists():
         return 0
     if p.is_file():
-        return p.stat().st_size
-    return sum(f.stat().st_size for f in p.rglob("*") if f.is_file())
+        try:
+            return p.stat().st_size
+        except OSError:
+            return 0
+    total = 0
+    try:
+        for f in p.rglob("*"):
+            try:
+                if f.is_file():
+                    total += f.stat().st_size
+            except OSError:
+                pass
+    except OSError:
+        pass
+    return total
 
 
 def human(n_bytes: float) -> str:
